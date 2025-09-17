@@ -1,6 +1,7 @@
 package spentcalories
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -21,27 +22,22 @@ func parseTraining(data string) (int, string, time.Duration, error) {
 	// TODO: реализовать функцию
 	stringsSlice := strings.Split(data, ",")
 	if len(stringsSlice) != 3 {
-		log.Println("Длина слайсов не равна трем")
-		return 0, " ", 0, fmt.Errorf("")
+		return 0, " ", 0, errors.New("длина слайсов не равна трем")
 	}
 	steps, err := strconv.Atoi(stringsSlice[0])
 	if err != nil {
-		log.Printf("%v", err)
 		return 0, "", 0, err
 	}
 
 	if steps <= 0 {
-		log.Println("Шаги < или = 0")
-		return 0, "", 0, fmt.Errorf("")
+		return 0, "", 0, errors.New("шаги не могут быть < или = 0")
 	}
 	duration, err := time.ParseDuration(stringsSlice[2])
 	if err != nil {
-		log.Printf("%v", err)
 		return 0, "", 0, err
 	}
 	if duration <= 0 {
-		log.Println("duration <= 0")
-		return 0, "", 0, fmt.Errorf("")
+		return 0, "", 0, errors.New("duration <=0")
 	}
 	return steps, stringsSlice[1], duration, nil
 
@@ -50,8 +46,8 @@ func parseTraining(data string) (int, string, time.Duration, error) {
 func distance(steps int, height float64) float64 {
 	// TODO: реализовать функцию
 	stepLength := height * stepLengthCoefficient
-	distance := (float64(steps) * stepLength) / mInKm
-	return distance
+	distanceResult := (float64(steps) * stepLength) / mInKm
+	return distanceResult
 }
 
 func meanSpeed(steps int, height float64, duration time.Duration) float64 {
@@ -59,31 +55,37 @@ func meanSpeed(steps int, height float64, duration time.Duration) float64 {
 	if duration <= 0 {
 		return 0
 	}
-	distance := distance(steps, height)
-	avgSpead := distance / duration.Hours()
+	distanceForSpeed := distance(steps, height)
+	avgSpead := distanceForSpeed / duration.Hours()
 	return avgSpead
 }
 
 func TrainingInfo(data string, weight, height float64) (string, error) {
+	var (
+		distanceForTraining  float64
+		meanSpeedForTraining float64
+		trainingType         string
+	)
+
 	// TODO: реализовать функцию
 	if weight <= 0 {
-		log.Println("вес не может быть <= 0")
-		return "", fmt.Errorf("")
+		return "", errors.New("вес не может быть <= 0")
 	}
-	var trainingType string
 	steps, trainingType, duration, err := parseTraining(data)
 	if err != nil {
 		log.Println(err)
 		return "", err
 	}
+	if steps <= 0 {
+		return "", errors.New("шаги не могут быть < или = 0")
+	}
+	distanceForTraining = distance(steps, height)
+	meanSpeedForTraining = meanSpeed(steps, height, duration)
 	switch trainingType {
 	case "Бег":
-		distance := distance(steps, height)
-		meanSpeed := meanSpeed(steps, height, duration)
 		caloriesRun, err := RunningSpentCalories(steps, weight, height, duration)
 		if err != nil {
-			log.Printf("ошибка, %v", err)
-			return "", err
+			return "", errors.New("err")
 
 		}
 		runResult := fmt.Sprintf(`Тип тренировки: %s
@@ -91,14 +93,11 @@ func TrainingInfo(data string, weight, height float64) (string, error) {
 Дистанция: %0.2f км.
 Скорость: %0.2f км/ч
 Сожгли калорий: %0.2f
-`, trainingType, duration.Hours(), distance, meanSpeed, caloriesRun)
+`, trainingType, duration.Hours(), distanceForTraining, meanSpeedForTraining, caloriesRun)
 		return runResult, nil
 	case "Ходьба":
-		distance := distance(steps, height)
-		meanSpeed := meanSpeed(steps, height, duration)
 		caloriesWalk, err := WalkingSpentCalories(steps, weight, height, duration)
 		if err != nil {
-			log.Println(err)
 			return "", err
 
 		}
@@ -107,10 +106,10 @@ func TrainingInfo(data string, weight, height float64) (string, error) {
 Дистанция: %0.2f км.
 Скорость: %0.2f км/ч
 Сожгли калорий: %0.2f
-`, trainingType, duration.Hours(), distance, meanSpeed, caloriesWalk)
+`, trainingType, duration.Hours(), distanceForTraining, meanSpeedForTraining, caloriesWalk)
 		return walkResult, nil
 	default:
-		return "", fmt.Errorf("неизвестный тип тренировки")
+		return "", errors.New("неизвестный тип тренировки")
 
 	}
 
@@ -119,46 +118,41 @@ func TrainingInfo(data string, weight, height float64) (string, error) {
 func RunningSpentCalories(steps int, weight, height float64, duration time.Duration) (float64, error) {
 	// TODO: реализовать функцию
 	if steps <= 0 {
-		log.Println("ошибка при рассчете: пройдено 0 шагов")
-		return 0, fmt.Errorf("")
+		return 0, errors.New("ошибка при рассчете: пройдено 0 шагов")
 	}
 	if weight <= 0 {
-		log.Println("вес не может быть <= 0")
-		return 0, fmt.Errorf("")
+		return 0, errors.New("вес не может быть <=0")
 	}
 	if height <= 0 {
-		log.Println("рост не может быть <= 0 ")
-		return 0, fmt.Errorf("")
+		return 0, errors.New("рост не может быть <= 0 ")
 	}
 	if duration <= 0 {
-		log.Println("duration <= 0")
-		return 0, fmt.Errorf("")
+		return 0, errors.New("duration <= 0")
 	}
-	meanSpeed := meanSpeed(steps, height, duration)
-	durationInMinutes := duration / time.Minute
-	calories := (weight * meanSpeed * float64(durationInMinutes)) / minInH
-	return calories, nil
+	meanSpeedForRunning := meanSpeed(steps, height, duration)
+	caloriesForRunning := (weight * meanSpeedForRunning * float64(duration.Minutes())) / minInH
+	return caloriesForRunning, nil
 
 }
 
 func WalkingSpentCalories(steps int, weight, height float64, duration time.Duration) (float64, error) {
 	// TODO: реализовать функцию
 	if steps <= 0 {
-		return 0, fmt.Errorf("")
+		return 0, errors.New("steps не может быть <= 0")
 	}
 	if weight <= 0 {
-		return 0, fmt.Errorf("")
+		return 0, errors.New("weight не может быть <= 0")
 	}
 	if height <= 0 {
-		return 0, fmt.Errorf("")
+		return 0, errors.New("height не может быть <= 0")
 	}
 	if duration <= 0 {
-		return 0, fmt.Errorf("")
+		return 0, errors.New("duration не может быть <= 0")
 	}
-	meanSpeed := meanSpeed(steps, height, duration)
+	meanSpeedForWalking := meanSpeed(steps, height, duration)
 	timeInMinutes := duration / time.Minute
-	calories := (weight * meanSpeed * float64(timeInMinutes)) / minInH
-	caloriesWithCoefficient := calories * walkingCaloriesCoefficient
+	caloriesForWalking := (weight * meanSpeedForWalking * float64(timeInMinutes)) / minInH
+	caloriesWithCoefficient := caloriesForWalking * walkingCaloriesCoefficient
 	return caloriesWithCoefficient, nil
 
 }
