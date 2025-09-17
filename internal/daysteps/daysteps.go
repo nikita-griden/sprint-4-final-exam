@@ -1,8 +1,8 @@
 package daysteps
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -18,33 +18,25 @@ const (
 )
 
 func parsePackage(data string) (int, time.Duration, error) {
-	if data == "" {
-		log.Println("data отсутствует")
-		return 0, 0, fmt.Errorf("")
-	}
 	// TODO: реализовать функцию
 	splitString := strings.Split(data, ",") // Разделяем строку по пробелам на слайс строк
 	if len(splitString) != 2 {              // проверяем что длина слайса равна 2
-		log.Println("Длина слайса не равна 2")
-		return 0, 0, fmt.Errorf("")
+		return 0, 0, errors.New("длина слайса не равна 2")
 	}
 
 	steps, err := strconv.Atoi(splitString[0])
 	if err != nil {
-		log.Println(err)
 		return 0, 0, err
 	}
 	if steps <= 0 {
-		return 0, 0, fmt.Errorf("")
+		return 0, 0, errors.New("steps не может быть <= 0")
 	}
 	duration, err := time.ParseDuration(splitString[1])
 	if err != nil {
-		log.Println(err)
 		return 0, 0, err
 	}
 	if duration <= 0 {
-		log.Println("Продолжительность не может быть < или = 0")
-		return 0, 0, fmt.Errorf("")
+		return 0, 0, errors.New("продолжительность не может быть < или = 0")
 	}
 	return steps, duration, nil
 
@@ -53,20 +45,16 @@ func parsePackage(data string) (int, time.Duration, error) {
 func DayActionInfo(data string, weight, height float64) string {
 	// TODO: реализовать функцию
 	if weight <= 0 {
-
 		return ""
 	}
 	if height <= 0 {
-
 		return ""
 	}
 	steps, duration, err := parsePackage(data)
 	if err != nil {
-		log.Printf("ошибка в parsePackage: %v", err)
 		return fmt.Sprintf("%v", err)
 	}
 	if steps <= 0 {
-
 		return ""
 	}
 	distM := float64(steps) * stepLength
